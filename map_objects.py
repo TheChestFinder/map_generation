@@ -20,9 +20,8 @@ def load_map(filepath: str) -> List[List['Tile']]:
 
 
 class Tile:
-    def __init__(self, biome: int, noise: float) -> None:
+    def __init__(self, biome: int) -> None:
         self.biome: int = biome
-        self.noise: float = noise
 
 Map_Type = List[List[Tile]]
 
@@ -37,6 +36,7 @@ class Map:
         #self.map = load_map("./map.bin")
         
         self.tile_imgs = self.load_tile_images()
+        self.tile_mini_imgs = self.load_mini_tile_imgs()
         #self.draw_map()
         self.offset_px = pygame.Vector2(0, 0)
         self.offset_tiles = pygame.Vector2(0, 0)
@@ -50,6 +50,15 @@ class Map:
             img = pygame.image.load(filename)
             tile_imgs.append(img)
         return tile_imgs
+        
+    def load_mini_tile_imgs(self) -> List:
+        tile_images = []
+        for i in range(6):
+            filename = "./assets/mini_" + str(i) + ".png"
+            img = pygame.image.load(filename)
+            tile_images.append(img)
+            
+        return tile_images
         
     def handle_pressed(self, pressed: Sequence[bool]):
         u_d_step = pygame.Vector2(0, 5)
@@ -116,17 +125,21 @@ class Map:
       
     def generate_map(self) -> Generator[Map_Type, None, Tuple[int, int]]:
         result = []
-        width, height = constants.MAP_TILES_WIDTH, constants.MAP_TILES_HEIGHT
+        width, height = constants.TOTAL_TILES_WIDTH, constants.TOTAL_TILES_HEIGHT
         tpf = 1500
         tile_counter = 0
         total_tiles = width * height
         for i in range(height):
             row = []
             for j in range(width):
-                scale = 0.075
-                noise = n.perlin(j * scale, i * scale, 500)
+                scale = 0.08
+                noise = n.perlin(i * scale, j * scale, 1)
                 biome = self.choose_biome(noise)
-                tile = Tile(biome, noise)
+                if biome > 5:
+                    biome = 5
+                if biome < 0:
+                    biome = 0
+                tile = Tile(biome)
                 row.append(tile)
                 tile_counter += 1
                 if tile_counter % tpf == 0:
@@ -142,7 +155,7 @@ class Map:
                 di, dj = int(self.offset_tiles.y), int( self.offset_tiles.x)
                 tile = self.map[i + di][j + dj]
                 tile_img: pygame.Surface = self.tile_imgs[tile.biome]
-                noise_img = font.render(str(round(tile.noise, 2)), True, (0, 0, 0))
+                #noise_img = font.render(str(round(tile.noise, 2)), True, (0, 0, 0))
                 self.map_img.blit(tile_img, (j* 32, i * 32))
                 #self.map_img.blit(noise_img, (j* 32, i * 32))
                              
@@ -155,9 +168,15 @@ class Map:
                 pygame.draw.rect(self.map_img, color, rect)
 
 
-    def get_minimap(self) -> pygame.Surface:
-        surface = pygame.Surface((150, 150))
-        surface.set_alpha(200)
+    def get_minimap(self, map: List[List[Tile]]) -> pygame.Surface:
+        surface = pygame.Surface((constants.TOTAL_TILES_WIDTH, constants.TOTAL_TILES_HEIGHT))
+        return_surface = pygame.Surface((150, 150))
+        return_surface.set_alpha(200)
         rect = pygame.Rect((0, 0), (10, 10))
-        pygame.draw.rect(surface, (255, 0, 0), rect, 1)
-        return surface
+        pygame.draw.rect(surface, (255, 0, 0), rect)
+        for row in range(len(map)):
+            for col in range(len(map[row])):
+                tile_img = self.tile_mini_imgs[map[row][col].biome]
+                surface.blit(tile_img, (col, row))
+        return_surface.blit(pygame.transform.scale(surface, (150, 150)), (0, 0))
+        return return_surface

@@ -1,7 +1,7 @@
 import pygame
-#from pnoise import Noise
-#from random import randint
-#from typing import Sequence, List
+from pnoise import Noise
+from random import randint
+from typing import Sequence, List
 from map_objects import Map
 from player import Player
 import constants
@@ -13,6 +13,9 @@ clock = pygame.time.Clock()
 player = Player()
 
 game_surface = pygame.Surface(map.map_img.get_size())
+
+delay = 0
+minimap = None
 
 while True:
     for event in pygame.event.get():
@@ -53,11 +56,19 @@ while True:
         
     else:
         game_surface.blit(map.map_img, (0, 0))
-        player.update_pos()
+        if delay == 10:
+            if player.stage < 7:
+                player.stage += 1
+            else:
+                player.stage = 1
+            delay = 0
         player.draw(game_surface, map.offset_tiles)
-        minimap = map.get_minimap()
+        player.update_pos()
+        if minimap == None:
+            minimap = map.get_minimap(map.map)
         window.blit(game_surface, map.offset_px)     
         window.blit(minimap, (0, 0))   
+        delay += 1
             
     pygame.display.update()
     clock.tick(60)

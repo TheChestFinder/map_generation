@@ -3,10 +3,11 @@ from typing import List, Tuple
 from map_objects import Tile
 from math import dist
 from itertools import pairwise
+from random import randint, shuffle, choice
 
 class Player:
     def __init__(self) -> None:
-        self.pos = pygame.Vector2(5, 0)
+        self.pos = pygame.Vector2(10, 9)
         self.body_sprites = pygame.image.load("./assets\png/thrust\BODY_animation.png")
         self.direction = 2
         self.stage = 0
@@ -14,8 +15,9 @@ class Player:
         self.route: List[Tuple[int,int]] = []
         
     def set_target(self, target: pygame.Vector2, game_map: List[List[Tile]]) -> None:
-        self.walking_target = target
-        self.calculate_route(game_map)
+        if game_map[round(target.y)][round(target.x)].biome not in (0, 1, 5):
+            self.walking_target = target
+            self.calculate_route(game_map)
     
     def calculate_route(self, map: List[List[Tile]]) -> None:
         open_set, closed_set = set(), set()
@@ -23,21 +25,28 @@ class Player:
         open_set.add(start)
         g_score, h_score = dict(), dict()
         g_score[start] = 0
-        h_score[start] = dist(start, self.walking_target)
+        #h_score[start] = dist(start, self.walking_target)
+        h_score[start] = abs(start[0] - self.walking_target[0])+abs(start[1] - self.walking_target[1])
         came_from = {}
         
         while open_set:
-            pos = min(open_set, key=lambda item: g_score[item] + h_score[item])
+            #pos = min(open_set, key=lambda item: g_score[item] + h_score[item])
+            min_score = min(g_score[item] + h_score[item] for item in open_set)
+            min_neighbors = [item for item in open_set if g_score[item] + h_score[item] == min_score]
+            pos = choice(min_neighbors)
+            
             open_set.remove(pos)
             closed_set.add(pos)
             if pos == tuple(self.walking_target):
                 break
-            neighbors = (
+            neighbors = [
                 (pos[0] + 1, pos[1]),
                 (pos[0], pos[1] + 1),
                 (pos[0] - 1, pos[1]),
                 (pos[0], pos[1] - 1)             
-            )
+            ]
+            shuffle(neighbors)
+            
             for m in neighbors:
                 if m in closed_set:
                     continue
@@ -52,9 +61,17 @@ class Player:
                 if map[tile_row][tile_col].biome in (0, 1, 5):
                     continue
                 open_set.add(m)
-                g_score[m] = g_score[pos] + 32
-                h_score[m] = dist(m, self.walking_target)
-                came_from[m] = pos
+                
+                if m[0] != pos[0] and m[1] != pos[1]:
+                    cost = g_score[pos] + dist(m, pos) * 0.8 
+                else: 
+                    cost = g_score[pos] + dist(m, pos)
+
+                if m not in g_score or cost < g_score[m]:
+                    g_score[m] = cost
+                    h_score[m] = dist(m, self.walking_target)
+                    came_from[m] = pos        
+                
     
         rev_route = [tuple(self.walking_target)]
         while (last_pos := rev_route[-1]) != start:
@@ -72,13 +89,16 @@ class Player:
             self.route.pop(0)
             return 
         
-        target = pygame.Vector2(next_pos) - self.pos
-        step = pygame.Vector2(1, 0)
-        angle = step.angle_to(target)
-        self.pos = self.pos+step.rotate(angle)
+        self.pos = next_pos
+        return
+        
+        #target = pygame.Vector2(next_pos) - self.pos
+        #step = pygame.Vector2(1, 0)
+        #angle = step.angle_to(target)
+        #self.pos = self.pos+step.rotate(angle)
     
     
-    def draw(self, surface:pygame.Surface, map_offset: pygame.Vector2):
+    def draw(self, surface:pygame.Surface, map_offset: pygame.Vector2) -> None:
         crop_x = self.stage * 64
         crop_y = self.direction * 64
         crop_rect = pygame.Rect((crop_x, crop_y), (64, 64))
@@ -86,7 +106,7 @@ class Player:
         img = pygame.transform.scale(img, (32, 32))
         
         player_pos = (self.pos - map_offset) * 32
-        surface.blit(img, (self.pos - map_offset) * 32)
+        surface.blit(img, player_pos)
         
         #target_pos = (self.walking_target - map_offset) * 32
         #pygame.draw.line(surface, (255, 0, 0), player_pos, target_pos, 10)
