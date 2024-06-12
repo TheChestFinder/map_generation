@@ -8,11 +8,13 @@ from random import randint, shuffle, choice
 class Player:
     def __init__(self) -> None:
         self.pos = pygame.Vector2(10, 9)
-        self.body_sprites = pygame.image.load("./assets\png/thrust\BODY_animation.png")
+        self.body_sprites = pygame.image.load("./assets\png/walkcycle\BODY_male.png")
         self.direction = 2
         self.stage = 0
         self.walking_target = self.pos
         self.route: List[Tuple[int,int]] = []
+        self.animation_counter = 0
+        self.animation_frame = 10
         
     def set_target(self, target: pygame.Vector2, game_map: List[List[Tile]]) -> None:
         if game_map[round(target.y)][round(target.x)].biome not in (0, 1, 5):
@@ -83,22 +85,39 @@ class Player:
     
     def update_pos(self):
         if len(self.route) == 0:
+            self.direction = 2
             return
         next_pos = self.route[0]
         if self.pos == next_pos:
             self.route.pop(0)
             return 
         
-        self.pos = next_pos
-        return
+        #self.pos = next_pos
+        #return
         
-        #target = pygame.Vector2(next_pos) - self.pos
-        #step = pygame.Vector2(1, 0)
-        #angle = step.angle_to(target)
-        #self.pos = self.pos+step.rotate(angle)
+        target = pygame.Vector2(next_pos) - self.pos
+        step = pygame.Vector2(0.2, 0)
+        angle = step.angle_to(target)
+        self.pos = self.pos+step.rotate(angle)
+        self.pos = pygame.Vector2(round(self.pos.x, 1), round(self.pos.y, 1))
+        self.direction = 3 - (angle % 360)//90
+    
+    def draw_line(self, surface:pygame.Surface, map_offset: pygame.Vector2):
+        for p1, p2 in pairwise(self.route):
+            p1_pos = (pygame.Vector2(p1) - map_offset) * 32 + pygame.Vector2(16, 16)
+            p2_pos = (pygame.Vector2(p2) - map_offset) * 32 + pygame.Vector2(16, 16)
+            pygame.draw.line(surface,(255, 0, 0), p1_pos, p2_pos, 2)
+    
     
     
     def draw(self, surface:pygame.Surface, map_offset: pygame.Vector2) -> None:
+        self.animation_counter +=1        
+        if self.animation_counter == self.animation_frame:
+            self.animation_counter = 0
+            self.stage %= 7
+            self.stage +=1
+            
+        
         crop_x = self.stage * 64
         crop_y = self.direction * 64
         crop_rect = pygame.Rect((crop_x, crop_y), (64, 64))
@@ -110,8 +129,5 @@ class Player:
         
         #target_pos = (self.walking_target - map_offset) * 32
         #pygame.draw.line(surface, (255, 0, 0), player_pos, target_pos, 10)
+        self.draw_line(surface, map_offset)
         
-        for p1, p2 in pairwise(self.route):
-            p1_pos = (pygame.Vector2(p1) - map_offset) * 32 + pygame.Vector2(16, 16)
-            p2_pos = (pygame.Vector2(p2) - map_offset) * 32 + pygame.Vector2(16, 16)
-            pygame.draw.line(surface,(255, 0, 0), p1_pos, p2_pos, 2)
