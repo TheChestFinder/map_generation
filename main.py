@@ -48,7 +48,7 @@ while True:
     if not map.is_loaded:    
         try:
             done, total = next(map_generator)
-            print(done, "/", total, "-", percentage_calc(done, total), "%")
+            #print(done, "/", total, "-", percentage_calc(done, total), "%")
             
             bar_width = percentage_calc(done, total) * 5
             pygame.draw.rect(window, (255, 255, 0), pygame.Rect(100, 555, bar_width, 60))
