@@ -1,12 +1,12 @@
 import pygame
 from pnoise import Noise
-from random import randint
+from random import randint, choice
 from typing import Sequence, List
 from map_objects import Map
 from player import Player
 import constants
 from progress_bar import map, map_generator, percentage_calc, text, textRect, font
-from inventory import InventoryItem, PlayerInventory
+from inventory import InventoryItem, PlayerInventory, walk_cycle
 
 pygame.init()
 window = pygame.display.set_mode((constants.WINDOW_HEIGHT, constants.WINDOW_WIDTH))
@@ -18,28 +18,27 @@ game_surface = pygame.Surface(map.map_img.get_size())
 delay = 0
 minimap = None
 
-robe_hood = InventoryItem("assets\png\walkcycle\HEAD_robe_hood.png")
-inventory = PlayerInventory()
-inventory.common_slots[2][2] = robe_hood
-inventory.common_slots[2][4] = robe_hood
+
+for i in range(6):
+    player.inventory.common_slots[i][0] = choice(walk_cycle)
 
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             exit()
-        if inventory.shown:
-            inventory.handle_events(event)
-        if event.type == pygame.MOUSEBUTTONDOWN and map.is_loaded and not inventory.shown:
+        if player.inventory.shown:
+            player.inventory.handle_events(event)
+        if event.type == pygame.MOUSEBUTTONDOWN and map.is_loaded and not player.inventory.shown:
             if event.button == pygame.BUTTON_LEFT:
                 map_col = round((-map.offset_px.x + event.pos[0])//32 + map.offset_tiles.x)
                 map_row = round((-map.offset_px.y + event.pos[1])//32 + map.offset_tiles.y)
                 player.set_target(pygame.Vector2(map_col, map_row), map.map)
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_e:
-                inventory.shown = not inventory.shown
+                player.inventory.shown = not player.inventory.shown
 
     pressed = pygame.key.get_pressed()
-    if not inventory.shown:
+    if not player.inventory.shown:
         map.handle_pressed(pressed)
     map.handle_pressed(pressed)
     window.fill((200, 0, 0))
@@ -81,7 +80,7 @@ while True:
             minimap = map.get_minimap(map.map)
         window.blit(game_surface, map.offset_px)     
         window.blit(minimap, (0, 0))  
-        inventory.display(window) 
+        player.inventory.display(window) 
         delay += 1
             
     pygame.display.update()

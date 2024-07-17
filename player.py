@@ -4,6 +4,7 @@ from map_objects import Tile
 from math import dist
 from itertools import pairwise
 from random import randint, shuffle, choice
+from inventory import PlayerInventory
 
 class Player:
     def __init__(self) -> None:
@@ -15,6 +16,7 @@ class Player:
         self.route: List[Tuple[int,int]] = []
         self.animation_counter = 0
         self.animation_frame = 10
+        self.inventory = PlayerInventory()
         
     def set_target(self, target: pygame.Vector2, game_map: List[List[Tile]]) -> None:
         if game_map[round(target.y)][round(target.x)].biome not in (0, 1, 5):
@@ -127,7 +129,12 @@ class Player:
         player_pos = (self.pos - map_offset) * 32
         surface.blit(img, player_pos)
         
-        #target_pos = (self.walking_target - map_offset) * 32
-        #pygame.draw.line(surface, (255, 0, 0), player_pos, target_pos, 10)
+        for line in self.inventory.clothes:
+            for item in line:
+                if item is None:
+                    continue
+                img = item.img.subsurface(crop_rect)
+                img = pygame.transform.scale(img, (32, 32))
+                surface.blit(img, player_pos)
         self.draw_line(surface, map_offset)
         
