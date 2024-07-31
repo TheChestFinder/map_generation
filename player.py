@@ -130,10 +130,10 @@ class Player:
         surface.blit(img, player_pos)
         
         for line in self.inventory.clothes:
-            for item in line:
-                if item is None:
+            for slot in line:
+                if slot.item is None:
                     continue
-                img = item.img.subsurface(crop_rect)
+                img = slot.item.img.subsurface(crop_rect)
                 img = pygame.transform.scale(img, (32, 32))
                 surface.blit(img, player_pos)
         self.draw_line(surface, map_offset)

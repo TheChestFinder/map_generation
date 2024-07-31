@@ -6,7 +6,7 @@ from map_objects import Map
 from player import Player
 import constants
 from progress_bar import map, map_generator, percentage_calc, text, textRect, font
-from inventory import InventoryItem, PlayerInventory, walk_cycle
+from inventory import InventoryItem, PlayerInventory, walk_cycle, InventorySlot
 
 pygame.init()
 window = pygame.display.set_mode((constants.WINDOW_HEIGHT, constants.WINDOW_WIDTH))
@@ -20,7 +20,10 @@ minimap = None
 
 
 for i in range(6):
-    player.inventory.common_slots[i][0] = choice(walk_cycle)
+    slot = InventorySlot()
+    slot.item = choice(walk_cycle)
+    slot.count = 1
+    player.inventory.common_slots[i][0] = slot
 
 while True:
     for event in pygame.event.get():

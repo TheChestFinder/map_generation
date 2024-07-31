@@ -17,6 +17,9 @@ class ClothesHead(InventoryType):
 class ClothesTorso(InventoryType):
     name = "TORSO"
 
+class ClothesHands(InventoryType):
+    name = "HANDS"
+
 class ClothesLegs(InventoryType):
     name = "LEGS"
 
@@ -28,7 +31,8 @@ inventory_types = (
     ClothesFeet,
     ClothesHead,
     ClothesLegs,
-    ClothesTorso
+    ClothesTorso,
+    ClothesHands
 )
 
 def inventory_type_factory(name:str) -> InventoryType | None:
@@ -62,20 +66,27 @@ for file in os.listdir(folder):
         continue
     walk_cycle.append(InventoryItem(folder + "/" + file, inventory_type))
 
-SlotsType = List[List[InventoryItem | None]]
 
-class InventorySLot:
+class InventorySlot:
     def __init__(self, slot_type: Optional[InventoryType] = None) -> None:
-        self.items: list[InventoryItem] = []
+        self.item: Optional[InventoryItem] = None
         self.count = 0
-        self.slot_type: None | InventoryType = None
+        self.slot_type: None | InventoryType = slot_type
 
+SlotsType = List[List[InventorySlot]]
 
 class PlayerInventory:
     def __init__(self) -> None:
-        self.common_slots: SlotsType = [[None] * 6 for _ in range(6)]
-        self.tools: SlotsType = [[None] * 6]
-        self.clothes: SlotsType = [[None] * 6]
+        self.common_slots: SlotsType = [[InventorySlot() for _ in range(6)] for _ in range(6)]
+        self.tools: SlotsType = [[InventorySlot() for _ in range(6)]]
+        self.clothes: SlotsType = [[
+            InventorySlot(ClothesHead),
+            InventorySlot(ClothesTorso),
+            InventorySlot(ClothesLegs),
+            InventorySlot(ClothesFeet),
+            InventorySlot(ClothesBelt),
+            InventorySlot(ClothesHands)
+            ]]
         self.shown = 0
         
         self.moving_item: Optional[tuple[int, int, int]] = None
@@ -100,28 +111,51 @@ class PlayerInventory:
         
         if event.type == pygame.MOUSEBUTTONUP:
             if self.moving_item is not None and self.mouse_pos is not None:
-                idx, mi, mj = self.moving_item
-                source_group = self.all_slots[idx]
-                for idx, dest_group in enumerate(self.all_slots):
-                    rect = self.slot_rects[idx]
-                    if rect.collidepoint(event.pos):
-                        i = (event.pos[1] - rect.top) // 64
-                        j = (event.pos[0] - rect.left) // 64
-                        dest_group[i][j], source_group[mi][mj] = source_group[mi][mj], dest_group[i][j]
+                self.apply_move(event.pos)
+                
                 self.mouse_pos = None
                 self.moving_item = None
         
         if event.type == pygame.MOUSEMOTION:
             self.mouse_pos = event.pos
     
-    def render_slots(self, slots: List[List[InventoryItem | None]]) -> pygame.Surface:
+    def swap_items(self, source_slot: InventorySlot, dest_slot: InventorySlot):
+        if dest_slot.slot_type is None:
+            source_slot.item, dest_slot.item = dest_slot.item, source_slot.item
+        if source_slot.item is None:
+            return
+        if dest_slot.slot_type == source_slot.item.inv_type:
+            source_slot.item, dest_slot.item = dest_slot.item, source_slot.item
+        #dest_group[i][j], source_group[mi][mj] = source_group[mi][mj], dest_group[i][j]
+    
+    def apply_move(self, mouse_pos: tuple[int, int]):
+        idx, mi, mj = self.moving_item
+        source_group = self.all_slots[idx]
+        for idx, dest_group in enumerate(self.all_slots):
+            rect = self.slot_rects[idx]
+            if rect.collidepoint(mouse_pos):
+                i = (mouse_pos[1] - rect.top) // 64
+                j = (mouse_pos[0] - rect.left) // 64
+                #print([id(item) for item in dest_group])
+                self.swap_items(source_group[mi][mj], dest_group[i][j])
+                
+    
+    
+    def render_slots(self, slots: SlotsType) -> pygame.Surface:
         surface_width = len(slots[0]) * 64
         surface_height = len(slots) * 64
         result = pygame.Surface((surface_width, surface_height))
         for i in range(len(slots)):
             for j in range(len(slots[i])):
-                item = slots[i][j]
+                slot = slots[i][j]
+                item = slot.item
                 item_surface = empty_slot()
+                if slot.slot_type is not None:
+                    slot_txt = slot.slot_type.name.capitalize()
+                    # HW render and blit text on item_surface
+                    font = pygame.font.SysFont(None, 12, True)
+                    img = font.render(slot_txt, True, (0, 0, 0))
+                    item_surface.blit(img, (20, 10))
                 if item is not None:
                     item.display_icon(item_surface, (0, 0))
                 result.blit(item_surface, (j * 64, i * 64))
@@ -138,7 +172,6 @@ class PlayerInventory:
         
         for idx, slots_group in enumerate(self.all_slots):
             slots_group_img = self.render_slots(slots_group)
-            
             slots_group_rect = self.slot_rects[idx]
             slots_group_rect.width = slots_group_img.get_width()
             slots_group_rect.height = slots_group_img.get_height()
@@ -148,7 +181,7 @@ class PlayerInventory:
             icon_surface = pygame.Surface((64,64))
             idx, mi, mj = self.moving_item
             group = self.all_slots[idx]
-            moving_item = group[mi][mj]
+            moving_item = group[mi][mj].item
             moving_item.display_icon(icon_surface, (0, 0))
             icon_surface.set_colorkey((0, 0, 0))
             bg_surface.blit(icon_surface, pygame.Vector2(self.mouse_pos) - pygame.Vector2(32, 32))
