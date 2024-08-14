@@ -18,12 +18,13 @@ game_surface = pygame.Surface(map.map_img.get_size())
 delay = 0
 minimap = None
 
+for _ in range(2):
+    for i in range(6):
+        slot = InventorySlot()
+        slot.item = choice(walk_cycle)
+        slot.count = 1
+        player.inventory.common_slots[i][_] = slot
 
-for i in range(6):
-    slot = InventorySlot()
-    slot.item = choice(walk_cycle)
-    slot.count = 1
-    player.inventory.common_slots[i][0] = slot
 
 while True:
     for event in pygame.event.get():
@@ -39,6 +40,12 @@ while True:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_e:
                 player.inventory.shown = not player.inventory.shown
+            if event.key == pygame.K_SPACE:
+                x, y = player.pos
+                tile = map.map[int(y)][int(x)]
+                #print(tile.resource)
+                player.interact(tile)
+                map.draw_map()
 
     pressed = pygame.key.get_pressed()
     if not player.inventory.shown:

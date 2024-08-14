@@ -3,6 +3,8 @@ from pnoise import Noise
 from typing import Sequence, List, Generator, Tuple
 from pickle import load, dumps
 import constants
+from recources import Resource, Animal, Wood, Stone, Metal, Diamond
+import random
 pygame.init()
 font = pygame.font.SysFont("Arial", 15)
 n = Noise()
@@ -20,8 +22,20 @@ def load_map(filepath: str) -> List[List['Tile']]:
 
 
 class Tile:
-    def __init__(self, biome: int) -> None:
+    def __init__(self, biome: int, noise: float) -> None:
         self.biome: int = biome
+        self.noise: float = noise
+        self.resource: Resource | None = None
+
+biome_recources = (
+    {None: 1},
+    {None: 1},
+    {None: 0.845, Animal: 0.03, Wood: 0.05, Stone: 0.05, Metal: 0.02, Diamond: 0.005},
+    {None: 0.8, Animal: 0.1, Wood: 0.1},
+    {None: 1},
+    {None: 1},
+)
+
 
 Map_Type = List[List[Tile]]
 
@@ -139,7 +153,13 @@ class Map:
                     biome = 5
                 if biome < 0:
                     biome = 0
-                tile = Tile(biome)
+                tile = Tile(biome, noise)
+                resource = random.choices(
+                    tuple(biome_recources[biome].keys()),
+                    tuple(biome_recources[biome].values())
+                    )[0]
+                # tile.resource = None if random.randint(0, 100) < 100 else Wood()
+                tile.resource = resource if resource is None else resource()
                 row.append(tile)
                 tile_counter += 1
                 if tile_counter % tpf == 0:
@@ -153,8 +173,17 @@ class Map:
         for i in range(tiles_i):
             for j in range(tiles_j):
                 di, dj = int(self.offset_tiles.y), int( self.offset_tiles.x)
-                tile = self.map[i + di][j + dj]
-                tile_img: pygame.Surface = self.tile_imgs[tile.biome]
+                tile: Tile = self.map[i + di][j + dj]
+                tile_img = self.tile_imgs[tile.biome]
+                tile_img = tile_img.copy()
+                
+                # tile_img.blit(
+                #     pygame.font.SysFont("Arial", 12).render(str(tile.resource), True, (255, 255, 255)),
+                #     (0, 0)
+                # )
+                
+                if tile.resource is not None:
+                    tile_img.blit(tile.resource.icon, (0, 0))
                 #noise_img = font.render(str(round(tile.noise, 2)), True, (0, 0, 0))
                 self.map_img.blit(tile_img, (j* 32, i * 32))
                 #self.map_img.blit(noise_img, (j* 32, i * 32))

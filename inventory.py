@@ -3,10 +3,12 @@ from typing import List, Sequence, Optional
 from constants import WINDOW_HEIGHT, WINDOW_WIDTH 
 import os
 
+
 class InventoryType:
     name:str
     
-
+class Materials(InventoryType):
+    name = "MATERIAL"
 
 class ClothesBelt(InventoryType):
     name = "BELT"
@@ -50,12 +52,16 @@ def empty_slot() -> pygame.Surface:
 
 
 class InventoryItem:
-    def __init__(self, filename: str, inv_type:InventoryType) -> None:
+    def __init__(self, filename: str,
+                 inv_type:InventoryType,
+                 icon_rect: pygame.Rect = (0, 0, 64, 64)
+                 ) -> None:
         self.img = pygame.image.load(filename)
-        self.icon = self.img.subsurface((0, 0, 64, 64))
+        self.icon = self.img.subsurface(icon_rect)
         self.inv_type = inv_type
+        
     def display_icon(self, surface:pygame.Surface, coords: Sequence[float]) -> None:
-        surface.blit(self.img, coords)
+        surface.blit(self.icon, coords)
 
 walk_cycle: list[pygame.Surface] = []
 folder = "./assets/png/walkcycle"
@@ -128,6 +134,17 @@ class PlayerInventory:
             source_slot.item, dest_slot.item = dest_slot.item, source_slot.item
         #dest_group[i][j], source_group[mi][mj] = source_group[mi][mj], dest_group[i][j]
     
+    def get_available_slot(self,  item: InventoryItem)-> InventorySlot | None:
+        candidate = None
+        for line in self.common_slots:
+            for slot in line:
+                if slot.item is not None and item is not None:
+                    if slot.item.img == item.img:
+                        return slot
+                if slot.count == 0 and candidate is None:
+                    candidate = slot
+        return candidate
+    
     def apply_move(self, mouse_pos: tuple[int, int]):
         idx, mi, mj = self.moving_item
         source_group = self.all_slots[idx]
@@ -138,9 +155,7 @@ class PlayerInventory:
                 j = (mouse_pos[0] - rect.left) // 64
                 #print([id(item) for item in dest_group])
                 self.swap_items(source_group[mi][mj], dest_group[i][j])
-                
-    
-    
+ 
     def render_slots(self, slots: SlotsType) -> pygame.Surface:
         surface_width = len(slots[0]) * 64
         surface_height = len(slots) * 64
@@ -158,6 +173,9 @@ class PlayerInventory:
                     item_surface.blit(img, (20, 10))
                 if item is not None:
                     item.display_icon(item_surface, (0, 0))
+                if slot.count > 1:
+                    count_txt = pygame.font.SysFont("Arial", 16).render(str(slot.count), True, (50, 50, 50))
+                    item_surface.blit(count_txt, (28, 40))
                 result.blit(item_surface, (j * 64, i * 64))
         return result
         
@@ -182,6 +200,8 @@ class PlayerInventory:
             idx, mi, mj = self.moving_item
             group = self.all_slots[idx]
             moving_item = group[mi][mj].item
+            if moving_item is not None:
+                moving_item.display_icon(icon_surface,(0, 0))
             moving_item.display_icon(icon_surface, (0, 0))
             icon_surface.set_colorkey((0, 0, 0))
             bg_surface.blit(icon_surface, pygame.Vector2(self.mouse_pos) - pygame.Vector2(32, 32))

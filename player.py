@@ -111,6 +111,15 @@ class Player:
             pygame.draw.line(surface,(255, 0, 0), p1_pos, p2_pos, 2)
     
     
+    def interact(self, tile: Tile):
+        if tile.resource is not None:
+            slot = self.inventory.get_available_slot(tile.resource.get_item())
+            if slot is not None:
+                slot.item = tile.resource.get_item()
+                slot.count = tile.resource.count
+                tile.resource = None
+            
+    
     
     def draw(self, surface:pygame.Surface, map_offset: pygame.Vector2) -> None:
         self.animation_counter +=1        
